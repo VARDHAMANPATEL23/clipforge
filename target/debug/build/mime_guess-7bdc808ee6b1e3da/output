@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/rajdpatel/Downloads/clipforge/target/debug/build/mime_guess-7bdc808ee6b1e3da/out/mime_types_generated.rs
