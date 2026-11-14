@@ -93,3 +93,8 @@ Clear button for each. Rendered clips are never deleted.
 
 Clip your own gameplay, or streamers who allow it. Reposting other people's streams without
 permission gets accounts struck.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
