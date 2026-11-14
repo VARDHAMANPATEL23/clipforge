@@ -1,1 +1,30 @@
+# Secrets: keep the example, ignore everything else
 .env
+.env.*
+!.env.example
+
+# Rust build output
+/target/
+
+# Web UI
+web/node_modules/
+web/dist/
+web/.vite/
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# macOS and editors
+.DS_Store
+.idea/
+.vscode/
+
+# Large files that should never land in the repo
+# (add a demo video on purpose with: git add -f path/to/file)
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.wav
+ggml-*.bin
