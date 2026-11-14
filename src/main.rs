@@ -6,6 +6,8 @@ mod media;
 mod paths;
 mod picker;
 mod pipeline;
+mod platform;
+mod preflight;
 mod render;
 mod settings;
 mod signals;

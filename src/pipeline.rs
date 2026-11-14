@@ -42,9 +42,8 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
         Self {
-            out: home.join("Movies").join("clipforge"),
+            out: crate::platform::default_out_dir(),
             max_clips: 8,
             min_len: 15.0,
             max_len: 60.0,

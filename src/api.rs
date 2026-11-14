@@ -72,7 +72,8 @@ async fn health() -> Json<Value> {
     Json(json!({
         "ok": true,
         "version": env!("CARGO_PKG_VERSION"),
-        "apple_silicon": cfg!(all(target_os = "macos", target_arch = "aarch64")),
+        "platform": crate::platform::os().as_str(),
+        "preflight": crate::preflight::run(),
         "ffmpeg": media::require("ffmpeg").is_ok(),
         "ffprobe": media::require("ffprobe").is_ok(),
         "yt_dlp": media::require("yt-dlp").is_ok(),
@@ -163,7 +164,15 @@ async fn create_job(State(s): State<AppState>, Json(b): Json<NewJob>) -> ApiResu
     if b.source.trim().is_empty() {
         return Err(bad_request("source is required"));
     }
+    check_preflight()?;
     Ok(Json(json!(s.jobs.submit(b.source.trim().to_string(), b.options))))
+}
+
+fn check_preflight() -> ApiResult<()> {
+    match crate::preflight::blocker() {
+        Some(msg) => Err(ApiError(StatusCode::UNPROCESSABLE_ENTITY, format!("this machine cannot run jobs: {msg}"))),
+        None => Ok(()),
+    }
 }
 
 async fn list_jobs(State(s): State<AppState>) -> Json<Value> {
@@ -182,6 +191,7 @@ struct Rerender {
 
 async fn rerender(State(s): State<AppState>, Path(id): Path<String>, Json(b): Json<Rerender>) -> ApiResult<Json<Value>> {
     let job = s.jobs.get(&id).ok_or_else(|| not_found("job"))?;
+    check_preflight()?;
     Ok(Json(json!(s.jobs.submit(job.source, b.options))))
 }
 

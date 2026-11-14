@@ -88,7 +88,7 @@ pub fn transcribe(
         return Ok(segs);
     }
     let model_path = ensure_model(model, log)?;
-    log(&format!("transcribing with whisper.cpp (Metal), model {model}"));
+    log(&format!("transcribing with whisper.cpp ({}), model {model}", crate::platform::whisper_backend()));
     let ctx = WhisperContext::new_with_params(&model_path, WhisperContextParameters::default())
         .map_err(|e| anyhow!("whisper init failed: {e}"))?;
     let eot = ctx.token_eot();

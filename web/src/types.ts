@@ -74,10 +74,27 @@ export interface Job {
   created_at: number;
 }
 
+export interface PreflightCheck {
+  name: string;
+  level: "pass" | "warn" | "fail";
+  detail: string;
+}
+
+export interface Preflight {
+  platform: string;
+  whisper_backend: string;
+  ram_gb: number;
+  free_disk_gb: number;
+  cores: number;
+  checks: PreflightCheck[];
+  ok: boolean;
+}
+
 export interface Health {
   ok: boolean;
   version: string;
-  apple_silicon: boolean;
+  platform: "macos" | "linux" | "wsl";
+  preflight: Preflight;
   ffmpeg: boolean;
   ffprobe: boolean;
   yt_dlp: boolean;

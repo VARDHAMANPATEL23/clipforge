@@ -22,7 +22,16 @@ tower-http = { version = "0.7.1", features = ["fs"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 uuid = { version = "1.29.2", features = ["v4"] }
+sysinfo = { version = "0.37", default-features = false, features = ["system", "disk"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.16.0", features = ["metal"] }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+whisper-rs = "0.16.0"
+
+[features]
+cuda = ["whisper-rs/cuda"]
 
 # Faster dev builds: less debug info, deps built once and cached.
 [profile.dev]
