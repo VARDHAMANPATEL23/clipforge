@@ -1,0 +1,10 @@
+prefix=/Users/rajdpatel/Downloads/clipforge/target/release/build/whisper-rs-sys-f16cd72a6c3e5798/out
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: whisper
+Description: Port of OpenAI's Whisper model in C/C++
+Version: 1.8.3
+Libs: -L${libdir} -lggml  -lggml-base -lwhisper
+Cflags: -I${includedir}
