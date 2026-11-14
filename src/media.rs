@@ -1,3 +1,4 @@
+use crate::platform;
 use anyhow::{Context, Result, bail};
 use serde::Serialize;
 use serde_json::Value;
@@ -11,13 +12,16 @@ const FFMPEG_FULL_BIN: &str = "/opt/homebrew/opt/ffmpeg-full/bin";
 
 pub fn require(binary: &str) -> Result<PathBuf> {
     let path_var = std::env::var_os("PATH").unwrap_or_default();
-    let mut dirs: Vec<PathBuf> = vec![PathBuf::from(FFMPEG_FULL_BIN)];
+    let mac = cfg!(target_os = "macos");
+    let mut dirs: Vec<PathBuf> = if mac { vec![PathBuf::from(FFMPEG_FULL_BIN)] } else { vec![] };
     dirs.extend(std::env::split_paths(&path_var));
-    dirs.extend(EXTRA_BIN_DIRS.iter().map(PathBuf::from));
+    if mac {
+        dirs.extend(EXTRA_BIN_DIRS.iter().map(PathBuf::from));
+    }
     dirs.into_iter()
         .map(|d| d.join(binary))
         .find(|p| p.is_file())
-        .with_context(|| format!("'{binary}' not found on PATH (brew install {binary})"))
+        .with_context(|| format!("'{binary}' not found on PATH ({})", platform::install_hint(binary)))
 }
 
 fn capture(binary: &str, args: &[&str]) -> String {
@@ -50,7 +54,7 @@ pub struct Encoder {
 
 impl Encoder {
     pub fn hardware(&self) -> bool {
-        self.name.contains("videotoolbox")
+        ["videotoolbox", "nvenc"].iter().any(|h| self.name.contains(h))
     }
 }
 
@@ -58,23 +62,48 @@ fn strs(v: &[&str]) -> Vec<String> {
     v.iter().map(|s| s.to_string()).collect()
 }
 
-pub fn pick_encoder(codec: &str, quality: &str, force_software: bool) -> Encoder {
-    let vt = format!("{codec}_videotoolbox");
-    if !force_software && ffmpeg_encoders().contains(&vt) {
-        let bitrate = match quality {
-            "low" => "5M",
-            "medium" => "8M",
-            _ => "12M",
-        };
+fn bitrate(quality: &str) -> &'static str {
+    match quality {
+        "low" => "5M",
+        "medium" => "8M",
+        _ => "12M",
+    }
+}
+
+fn hardware_encoder(codec: &str, quality: &str) -> Option<Encoder> {
+    let rate = bitrate(quality);
+    if cfg!(target_os = "macos") {
+        let vt = format!("{codec}_videotoolbox");
+        if !ffmpeg_encoders().contains(&vt) {
+            return None;
+        }
         let profile = if codec == "h264" { "high" } else { "main" };
         let mut args = strs(&[
-            "-c:v", &vt, "-b:v", bitrate, "-maxrate", bitrate, "-bufsize", "24M",
+            "-c:v", &vt, "-b:v", rate, "-maxrate", rate, "-bufsize", "24M",
             "-profile:v", profile, "-allow_sw", "1", "-realtime", "0",
         ]);
         if codec == "hevc" {
             args.extend(strs(&["-tag:v", "hvc1"]));
         }
-        return Encoder { name: vt, video_args: args, decode_args: strs(&["-hwaccel", "videotoolbox"]) };
+        return Some(Encoder { name: vt, video_args: args, decode_args: strs(&["-hwaccel", "videotoolbox"]) });
+    }
+    let nv = format!("{codec}_nvenc");
+    if !ffmpeg_encoders().contains(&nv) || !platform::has_nvidia() {
+        return None;
+    }
+    let mut args = strs(&["-c:v", &nv, "-preset", "p5", "-b:v", rate, "-maxrate", rate, "-bufsize", "24M"]);
+    if codec == "hevc" {
+        args.extend(strs(&["-tag:v", "hvc1"]));
+    }
+    Some(Encoder { name: nv, video_args: args, decode_args: strs(&["-hwaccel", "cuda"]) })
+}
+
+/// Hardware encoder when available. On macOS hardware is always preferred (`force_software` ignored).
+pub fn pick_encoder(codec: &str, quality: &str, force_software: bool) -> Encoder {
+    if !force_software || cfg!(target_os = "macos") {
+        if let Some(enc) = hardware_encoder(codec, quality) {
+            return enc;
+        }
     }
     let crf = match quality {
         "low" => "25",

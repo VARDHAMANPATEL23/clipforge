@@ -22,6 +22,11 @@ interface Props {
 export function OptionsForm({ options: o, onChange, source }: Props) {
   const local = source && !isUrl(source) ? source : null;
   const [aspect, setAspect] = useState(16 / 9);
+  const [mac, setMac] = useState(false);
+
+  useEffect(() => {
+    api.health().then((h) => setMac(h.platform === "macos")).catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!local) return;
@@ -170,7 +175,9 @@ export function OptionsForm({ options: o, onChange, source }: Props) {
           </div>
         </div>
         <div style={{ marginTop: 8 }}>
-          <Switch label="Software encoding" hint="Force libx264/libx265 instead of the Apple media engine" checked={o.software} onChange={(v) => set({ software: v })} />
+          {!mac && (
+            <Switch label="Software encoding" hint="Force libx264/libx265 instead of the GPU encoder (NVENC)" checked={o.software} onChange={(v) => set({ software: v })} />
+          )}
           <Switch label="Fresh analysis" hint="Ignore cached transcript, signals and picks" checked={o.fresh} onChange={(v) => set({ fresh: v })} />
         </div>
       </Card>

@@ -1,15 +1,15 @@
 # shardreel
 
 Turns long gameplay recordings into vertical 9:16 clips for Shorts, Reels and TikTok.
-Runs natively on Apple Silicon Macs. No Docker, no cloud renderer, no subscription.
+Runs natively on Apple Silicon Macs and on Linux (including WSL2). No Docker, no cloud renderer, no subscription.
 
 The product is called shardreel. The Rust engine and data folder keep their internal name,
 `clipforge` (`~/.clipforge`, `CLIPFORGE_*` environment variables).
 
 | Stage | What runs on your Mac |
 |---|---|
-| Transcription | whisper.cpp (large-v3-turbo) on the Apple GPU through Metal |
-| Decode and encode | VideoToolbox hardware decode and H.264 or HEVC encode |
+| Transcription | whisper.cpp (large-v3-turbo): Metal on Mac, CPU on Linux (CUDA optional) |
+| Decode and encode | VideoToolbox on Mac, NVENC on Linux with an NVIDIA GPU, libx264/libx265 fallback |
 | Moment detection | loudness spikes, on-screen action, speech rate, hype words |
 | Ranking and titles (optional) | Gemini, OpenRouter, LM Studio or Ollama |
 | Captions | word-by-word highlighted captions and a hook banner (libass) |
@@ -19,7 +19,21 @@ Analysis is cached, so re-rendering with another layout skips transcription and 
 
 ## Requirements
 
-Apple Silicon Mac, plus:
+### Hardware and storage
+
+shardreel checks these at startup (Settings > System) and refuses to start a job below the minimum.
+
+| Resource | Minimum | Recommended |
+|---|---|---|
+| Free disk (in `~/.clipforge`) | 10 GB | 30 GB |
+| RAM | 8 GB | 16 GB |
+| CPU cores | 4 (warning only) | 8 |
+| GPU | none on Linux (slow); Apple Silicon on Mac | NVIDIA GPU on Linux |
+
+The Whisper model alone is about 1.6 GB. Source videos, cache and rendered clips need the rest.
+Intel Macs are not supported.
+
+### macOS (Apple Silicon)
 
 ```bash
 brew install cmake yt-dlp ffmpeg-full
@@ -28,7 +42,32 @@ curl -fsSL https://bun.sh/install | bash                          # bun
 ```
 
 `ffmpeg-full` is keg-only (it does not replace an existing ffmpeg). It includes libass, which
-captions need, and shardreel looks for it first.
+captions need, and shardreel looks for it first. Hardware encoding is always on on Mac.
+
+### Linux (Debian, Ubuntu)
+
+```bash
+sudo apt install build-essential cmake pkg-config libclang-dev ffmpeg pipx
+pipx install yt-dlp
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # Rust
+curl -fsSL https://bun.sh/install | bash                          # bun
+```
+
+Transcription runs on the CPU by default. With an NVIDIA GPU and the CUDA toolkit installed,
+build with `cargo run --release --features cuda`. Hardware encoding (NVENC) is used
+automatically when `nvidia-smi` works and ffmpeg has `h264_nvenc`. Otherwise shardreel uses
+libx264/libx265. Clips are saved to `~/Videos/clipforge/`.
+
+### Windows through WSL2
+
+Use WSL2 with an Ubuntu distro and follow the Linux steps inside it.
+
+- Keep the project and `~/.clipforge` on the Linux filesystem (`/home/you`), not under `/mnt/c`.
+  File access through `/mnt` is much slower, and Settings shows a warning if you do.
+- For GPU support, install the NVIDIA Windows driver with WSL support. Do not install a Linux
+  GPU driver inside WSL.
+- Open http://127.0.0.1:8787 in your Windows browser. WSL2 forwards localhost.
+- Give WSL enough memory and disk in `%UserProfile%\.wslconfig` if the checks fail.
 
 ## Build and run
 
@@ -54,7 +93,7 @@ For UI development, run `cargo run --release` and `cd web && bun run dev`
 3. Optional: turn on AI ranking and pick a provider.
 4. Press **Generate clips** and watch the stages. URL downloads show a progress bar.
 
-Clips are saved to `~/Movies/clipforge/<video-name>/`: the `NN_title.mp4` files, a `.jpg`
+Clips are saved to `~/Movies/clipforge/<video-name>/` (Linux and WSL: `~/Videos/clipforge/`): the `NN_title.mp4` files, a `.jpg`
 thumbnail for each, and `clips.json` with timestamps, title, hook, hashtags and a caption.
 
 Each clip carries "Built with shardreel" in its metadata, along with the title and caption.

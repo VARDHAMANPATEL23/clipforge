@@ -15,6 +15,19 @@ function Check({ label, ok, hint }: { label: string; ok: boolean; hint?: string 
   );
 }
 
+function Resource({ name, level, detail }: { name: string; level: "pass" | "warn" | "fail"; detail: string }) {
+  const text = { pass: "OK", warn: "Low", fail: "Too low" }[level];
+  return (
+    <div className="kv">
+      <div>
+        <div>{name}</div>
+        {level !== "pass" && <div className="hint mono">{detail}</div>}
+      </div>
+      <span className={`badge ${level === "pass" ? "solid" : level === "fail" ? "fail" : ""}`}>{text}</span>
+    </div>
+  );
+}
+
 interface StorageRow {
   kind: string;
   label: string;
@@ -156,12 +169,18 @@ export function SettingsPage() {
           <span className="muted">Checking...</span>
         ) : (
           <>
-            <Check label="Apple Silicon" ok={health.apple_silicon} />
-            <Check label="ffmpeg" ok={health.ffmpeg} hint="brew install ffmpeg" />
-            <Check label="ffprobe" ok={health.ffprobe} hint="brew install ffmpeg" />
+            <div className="kv">
+              <div>Platform ({health.preflight.whisper_backend} transcription)</div>
+              <span className="badge solid">{health.platform.toUpperCase()}</span>
+            </div>
+            {health.preflight.checks.map((c) => (
+              <Resource key={c.name} name={c.name} level={c.level} detail={c.detail} />
+            ))}
+            <Check label="ffmpeg" ok={health.ffmpeg} hint={health.platform === "macos" ? "brew install ffmpeg" : "sudo apt install ffmpeg"} />
+            <Check label="ffprobe" ok={health.ffprobe} hint={health.platform === "macos" ? "brew install ffmpeg" : "sudo apt install ffmpeg"} />
             <Check label={`Hardware encoder (${health.encoder})`} ok={health.hardware_encoder} />
-            <Check label="Captions (libass in ffmpeg)" ok={health.libass} hint="Needs an ffmpeg build with libass: brew install homebrew-ffmpeg/ffmpeg/ffmpeg" />
-            <Check label="yt-dlp (URL downloads)" ok={health.yt_dlp} hint="brew install yt-dlp" />
+            <Check label="Captions (libass in ffmpeg)" ok={health.libass} hint={health.platform === "macos" ? "Needs an ffmpeg build with libass: brew install ffmpeg-full" : "Needs an ffmpeg build with libass: sudo apt install ffmpeg"} />
+            <Check label="yt-dlp (URL downloads)" ok={health.yt_dlp} hint={health.platform === "macos" ? "brew install yt-dlp" : "pipx install yt-dlp"} />
             <Check label="Whisper model (downloads on first run, ~1.6 GB)" ok={health.whisper_model} />
           </>
         )}

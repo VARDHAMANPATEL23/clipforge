@@ -1,4 +1,4 @@
-//! Render vertical 1080x1920 clips with ffmpeg (VideoToolbox on Mac), in parallel.
+//! Render vertical 1080x1920 clips with ffmpeg (VideoToolbox on Mac, NVENC on Linux/WSL with NVIDIA), in parallel.
 use crate::media::{Encoder, VideoInfo, has_libass, require, run};
 use crate::picker::Moment;
 use crate::subtitles::{AssOpts, build_ass};
