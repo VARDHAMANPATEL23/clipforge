@@ -28,3 +28,6 @@ web/.vite/
 *.webm
 *.wav
 ggml-*.bin
+
+# YouTube cookies (session secret)
+cookies.txt

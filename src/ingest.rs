@@ -43,7 +43,15 @@ pub fn fetch(source: &str, workdir: &Path, on_progress: &dyn Fn(DlProgress)) -> 
     }
     let dl = workdir.join("downloads");
     std::fs::create_dir_all(&dl)?;
-    let mut child = Command::new(require("yt-dlp")?)
+    let cookies = std::env::var_os("CLIPFORGE_COOKIES")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("cookies.txt"));
+    let mut cmd = Command::new(require("yt-dlp")?);
+    if cookies.is_file() {
+        cmd.arg("--cookies").arg(&cookies);
+    }
+    let mut child = cmd
+        .args(["--socket-timeout", "30", "--retries", "5"])
         .args([
             "-f",
             "bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]/b",
